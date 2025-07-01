@@ -37,6 +37,7 @@ def get_alert_level(temp):
 @app.route("/apparent_temp", methods=["POST"])
 def handle_request():
     data = request.get_json()
+    print("🔥 받은 데이터:", data)
 
     try:
         Ta = int(data["action"]["params"]["Ta"])
