@@ -3,6 +3,7 @@ import math
 
 app = Flask(__name__)
 
+# 습구온도 계산
 def calculate_wet_bulb_temp(Ta, RH):
     term1 = Ta * math.atan(0.151977 * math.sqrt(RH + 8.313659))
     term2 = math.atan(Ta + RH)
@@ -11,6 +12,7 @@ def calculate_wet_bulb_temp(Ta, RH):
     Tw = term1 + term2 - term3 + term4 - 4.686035
     return Tw
 
+# 체감온도 계산
 def calculate_apparent_temp(Ta, RH):
     Tw = calculate_wet_bulb_temp(Ta, RH)
     apparent_temp = (
@@ -19,6 +21,7 @@ def calculate_apparent_temp(Ta, RH):
     )
     return round(apparent_temp, 2)
 
+# 경보 단계 판단
 def get_alert_level(temp):
     if temp >= 38:
         return "위험"
@@ -30,11 +33,24 @@ def get_alert_level(temp):
         return "관심"
     return None
 
+# API 엔드포인트
 @app.route("/apparent_temp", methods=["POST"])
 def handle_request():
     data = request.get_json()
-    Ta = int(data['Ta'])
-    RH = int(data['RH'])
+
+    try:
+        Ta = int(data["action"]["params"]["Ta"])
+        RH = int(data["action"]["params"]["RH"])
+    except Exception as e:
+        return jsonify({
+            "version": "2.0",
+            "template": {
+                "outputs": [
+                    {"simpleText": {"text": f"입력 오류: {str(e)}"}}
+                ]
+            }
+        }), 400
+
     apparent = calculate_apparent_temp(Ta, RH)
     level = get_alert_level(apparent)
 
@@ -46,9 +62,12 @@ def handle_request():
     return jsonify({
         "version": "2.0",
         "template": {
-            "outputs": [{"simpleText": {"text": message}}]
+            "outputs": [
+                {"simpleText": {"text": message}}
+            ]
         }
     })
 
+# Flask 실행 설정 (Render 호환)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
