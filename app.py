@@ -4,22 +4,33 @@ import json
 
 app = Flask(__name__)
 
+def calculate_wet_bulb_temperature(Ta, RH):
+    # Ta: 기온(℃), RH: 상대습도(%)
+    return (Ta * math.atan(0.151977 * (RH + 8.313659)**0.5) +
+            math.atan(Ta + RH) -
+            math.atan(RH - 1.67633) +
+            0.00391838 * RH**1.5 * math.atan(0.023101 * RH) -
+            4.686035)
+
+def calculate_apparent_temperature(Ta, RH):
+    Tw = calculate_wet_bulb_temperature(Ta, RH)
+    return (-0.2442 + 0.55399 * Tw + 0.45535 * Ta -
+            0.0022 * Tw**2 + 0.00278 * Tw * Ta + 3.0)
+
 @app.route("/apparent_temp", methods=["POST"])
 def handle_request():
     data = request.get_json()
     print("🔥 받은 데이터:", json.dumps(data, ensure_ascii=False, indent=2))
 
     try:
-        # detailParams에서 origin 값을 꺼내 숫자로 변환
         Ta = float(data['action']['detailParams']['Ta']['origin'])
         RH = float(data['action']['detailParams']['RH']['origin'])
 
-        # Stull 식 기반 체감온도 계산
-        apparent_temp = Ta + 0.33 * RH - 0.70
+        apparent_temp = calculate_apparent_temperature(Ta, RH)
         apparent_temp = round(apparent_temp, 2)
 
-        # 경보 단계 판단
-        if apparent_temp >= 38:
+        # 경보 단계 판단 (기상청 기준)
+        if apparent_temp >= 41:
             level = "위험"
         elif apparent_temp >= 35:
             level = "경고"
