@@ -1,11 +1,16 @@
 from flask import Flask, request, jsonify
 import math
 import json
+import re
 
 app = Flask(__name__)
 
+def extract_number(value):
+    """문자열에서 숫자만 추출 (정수 또는 소수점)"""
+    match = re.search(r"[-+]?\d*\.?\d+", value)
+    return float(match.group()) if match else None
+
 def calculate_wet_bulb_temperature(Ta, RH):
-    # Ta: 기온(℃), RH: 상대습도(%)
     return (Ta * math.atan(0.151977 * (RH + 8.313659)**0.5) +
             math.atan(Ta + RH) -
             math.atan(RH - 1.67633) +
@@ -23,21 +28,16 @@ def handle_request():
     print("🔥 받은 데이터:", json.dumps(data, ensure_ascii=False, indent=2))
 
     try:
-        # detailParams에서 sys.number로 넘어온 값들을 순서대로 추출
         params = data['action']['detailParams']
-        numbers = []
+        # sys.unit.temperature와 sys.number.percent 파라미터명에 따라 추출
+        temp_str = params['sys.unit.temperature']['origin']
+        humid_str = params['sys.number.percent']['origin']
 
-        # sys.number로 시작하는 파라미터만 추출 (혹시 모를 다른 파라미터 대비)
-        for key in params:
-            if params[key].get('entity', '').startswith('sys.number'):
-                numbers.append(float(params[key]['origin']))
+        Ta = extract_number(temp_str)  # "30도" → 30.0
+        RH = extract_number(humid_str) # "55%" → 55.0
 
-        # 숫자가 2개가 아니면 오류 처리
-        if len(numbers) != 2:
-            raise ValueError("온도와 습도 숫자를 정확히 입력해주세요.")
-
-        # 순서대로 매핑
-        Ta, RH = numbers[0], numbers[1]
+        if Ta is None or RH is None:
+            raise ValueError("온도와 습도를 올바르게 입력해주세요.")
 
         apparent_temp = calculate_apparent_temperature(Ta, RH)
         apparent_temp = round(apparent_temp, 2)
@@ -77,7 +77,7 @@ def handle_request():
                 "outputs": [
                     {
                         "simpleText": {
-                            "text": "입력값을 처리하는 중 오류가 발생했습니다. 숫자로 된 온도와 습도를 정확히 입력해주세요."
+                            "text": "입력값을 처리하는 중 오류가 발생했습니다. 예: 30도 55%처럼 입력해주세요."
                         }
                     }
                 ]
