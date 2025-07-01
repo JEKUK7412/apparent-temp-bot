@@ -13,8 +13,8 @@ def handle_request():
         params = data['action']['params']
 
         # 온도: "30도" → 30, 습도: "60%" → 60
-        temp_raw = params.get('sys.unit.temperature', '0')
-        humid_raw = params.get('sys.number.percent', '0')
+        temp_raw = params.get('sys_unit_temperature', '0')
+        humid_raw = params.get('sys_number_percent', '0')
 
         # 숫자만 추출
         Ta = float(''.join(filter(str.isdigit, str(temp_raw))))
