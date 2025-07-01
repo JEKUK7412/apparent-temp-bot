@@ -23,8 +23,21 @@ def handle_request():
     print("🔥 받은 데이터:", json.dumps(data, ensure_ascii=False, indent=2))
 
     try:
-        Ta = float(data['action']['detailParams']['Ta']['origin'])
-        RH = float(data['action']['detailParams']['RH']['origin'])
+        # detailParams에서 sys.number로 넘어온 값들을 순서대로 추출
+        params = data['action']['detailParams']
+        numbers = []
+
+        # sys.number로 시작하는 파라미터만 추출 (혹시 모를 다른 파라미터 대비)
+        for key in params:
+            if params[key].get('entity', '').startswith('sys.number'):
+                numbers.append(float(params[key]['origin']))
+
+        # 숫자가 2개가 아니면 오류 처리
+        if len(numbers) != 2:
+            raise ValueError("온도와 습도 숫자를 정확히 입력해주세요.")
+
+        # 순서대로 매핑
+        Ta, RH = numbers[0], numbers[1]
 
         apparent_temp = calculate_apparent_temperature(Ta, RH)
         apparent_temp = round(apparent_temp, 2)
